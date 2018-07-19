@@ -52,6 +52,7 @@ public class MainActivity extends ListActivity {
         selectedfile = (TextView) findViewById(R.id.selecteditem);
         durationCurrentTime = (TextView) findViewById(R.id.durationCurrentTime);
         endTime = (TextView) findViewById(R.id.endTime);
+        durationCurrentTime.setText("0.00");
         seekBar = (SeekBar) findViewById(R.id.seekBar);
         prev = (ImageButton) findViewById(R.id.previous);
         play = (ImageButton) findViewById(R.id.play);
@@ -141,21 +142,22 @@ public class MainActivity extends ListActivity {
 
     /**
      * Background Runnable thread
-     * */
+     */
     private Runnable mUpdateTimeTask = new Runnable() {
         public void run() {
+            if (player != null) {
+                long totalDuration = player.getDuration();
+                long currentDuration = player.getCurrentPosition();
 
-            long totalDuration = player.getDuration();
-            long currentDuration = player.getCurrentPosition();
-
-            durationCurrentTime.setText("" + utils.milliSecondsToTimer(currentDuration));
-            // Updating progress bar
-            int progress = (int)(utils.getProgressPercentage(currentDuration, totalDuration));
-            //Log.d("Progress", ""+progress);
+                durationCurrentTime.setText("" + utils.milliSecondsToTimer(currentDuration));
+                // Updating progress bar
+                int progress = (int) (utils.getProgressPercentage(currentDuration, totalDuration));
+                //Log.d("Progress", ""+progress);
 //            seekBar.setProgress(progress);
 
-            // Running this thread after 100 milliseconds
-            handler.postDelayed(this, 100);
+                // Running this thread after 100 milliseconds
+                handler.postDelayed(this, 100);
+            }
         }
     };
 
@@ -251,9 +253,10 @@ public class MainActivity extends ListActivity {
             };
 
 //
+
     /**
      * Update timer on seekbar
-     * */
+     */
     public void updateProgressBar() {
         handler.postDelayed(mUpdateTimeTask, 100);
     }
