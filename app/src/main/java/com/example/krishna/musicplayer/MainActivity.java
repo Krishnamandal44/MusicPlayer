@@ -22,6 +22,8 @@ public class MainActivity extends ListActivity {
     private static final int STEP_VALUE = 4000;
 
     private TextView selectedfile = null;
+    private TextView durationCurrentTime = null;
+    private TextView endTime = null;
     private SeekBar seekBar = null;
     private MediaPlayer player = null;
     private ImageButton prev = null;
@@ -33,6 +35,7 @@ public class MainActivity extends ListActivity {
     private String currentFile = "";
     private boolean isMovingSeekBar = false;
     private final Handler handler = new Handler();
+    private Utilities utils;
 
     private final Runnable updatePositinRunnable = new Runnable() {
         @Override
@@ -47,11 +50,13 @@ public class MainActivity extends ListActivity {
         setContentView(R.layout.activity_main);
 
         selectedfile = (TextView) findViewById(R.id.selecteditem);
+        durationCurrentTime = (TextView) findViewById(R.id.durationCurrentTime);
+        endTime = (TextView) findViewById(R.id.endTime);
         seekBar = (SeekBar) findViewById(R.id.seekBar);
         prev = (ImageButton) findViewById(R.id.previous);
         play = (ImageButton) findViewById(R.id.play);
         next = (ImageButton) findViewById(R.id.next);
-
+        utils = new Utilities();
         player = new MediaPlayer();
         player.setOnCompletionListener(onCompletion);
         player.setOnErrorListener(onError);
@@ -89,6 +94,7 @@ public class MainActivity extends ListActivity {
             player.setDataSource(file);
             player.prepare();
             player.start();
+            updateProgressBar();
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         } catch (IllegalStateException e) {
@@ -97,10 +103,16 @@ public class MainActivity extends ListActivity {
             e.printStackTrace();
         }
         seekBar.setMax(player.getDuration());
+        long totalDuration = player.getDuration();
+        long currentDuration = player.getCurrentPosition();
+
+        durationCurrentTime.setText("" + utils.milliSecondsToTimer(currentDuration));
+        endTime.setText("" + utils.milliSecondsToTimer(totalDuration));
         play.setImageResource(android.R.drawable.ic_media_pause);
         updatePosition();
         isStarted = true;
     }
+
 
     private void stopPlay() {
         player.stop();
@@ -127,11 +139,32 @@ public class MainActivity extends ListActivity {
         handler.postDelayed(updatePositinRunnable, UPDATE_FREQUENCY);
     }
 
+    /**
+     * Background Runnable thread
+     * */
+    private Runnable mUpdateTimeTask = new Runnable() {
+        public void run() {
+
+            long totalDuration = player.getDuration();
+            long currentDuration = player.getCurrentPosition();
+
+            durationCurrentTime.setText("" + utils.milliSecondsToTimer(currentDuration));
+            // Updating progress bar
+            int progress = (int)(utils.getProgressPercentage(currentDuration, totalDuration));
+            //Log.d("Progress", ""+progress);
+//            seekBar.setProgress(progress);
+
+            // Running this thread after 100 milliseconds
+            handler.postDelayed(this, 100);
+        }
+    };
+
     private View.OnClickListener OnButtonClick = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
                 case R.id.play: {
+
                     if (player.isPlaying()) {
                         handler.removeCallbacks(updatePositinRunnable);
                         player.pause();
@@ -197,12 +230,33 @@ public class MainActivity extends ListActivity {
 
                 @Override
                 public void onStartTrackingTouch(SeekBar seekBar) {
+                    // remove message Handler from updating progress bar
+                    handler.removeCallbacks(mUpdateTimeTask);
                     isMovingSeekBar = true;
                 }
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
+
+                    handler.removeCallbacks(mUpdateTimeTask);
+                    int totalDuration = player.getDuration();
+                    int currentPosition = utils.progressToTimer(seekBar.getProgress(), totalDuration);
+
+                    // forward or backward to certain seconds
+//                    player.seekTo(currentPosition);
+                    // update timer progress again
+                    updateProgressBar();
                     isMovingSeekBar = false;
                 }
             };
+
+//
+    /**
+     * Update timer on seekbar
+     * */
+    public void updateProgressBar() {
+        handler.postDelayed(mUpdateTimeTask, 100);
+    }
+
+
 }
