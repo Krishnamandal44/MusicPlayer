@@ -1,10 +1,16 @@
 package com.example.krishna.musicplayer;
 
+import android.Manifest;
 import android.app.ListActivity;
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +22,8 @@ import android.widget.TextView;
 
 import java.io.IOException;
 
+import static android.support.constraint.Constraints.TAG;
+
 public class MainActivity extends ListActivity {
 
     private static final int UPDATE_FREQUENCY = 500;
@@ -24,6 +32,7 @@ public class MainActivity extends ListActivity {
     private TextView selectedfile = null;
     private TextView durationCurrentTime = null;
     private TextView endTime = null;
+    private TextView audioData = null;
     private SeekBar seekBar = null;
     private MediaPlayer player = null;
     private ImageButton prev = null;
@@ -48,10 +57,18 @@ public class MainActivity extends ListActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        isReadStoragePermissionGranted();
+        initialiseView();
 
+
+
+    }
+
+    private void initialiseView() {
         selectedfile = (TextView) findViewById(R.id.selecteditem);
         durationCurrentTime = (TextView) findViewById(R.id.durationCurrentTime);
         endTime = (TextView) findViewById(R.id.endTime);
+        audioData = (TextView) findViewById(R.id.audioData);
         durationCurrentTime.setText("0.00");
         seekBar = (SeekBar) findViewById(R.id.seekBar);
         prev = (ImageButton) findViewById(R.id.previous);
@@ -73,6 +90,73 @@ public class MainActivity extends ListActivity {
             prev.setOnClickListener(OnButtonClick);
             play.setOnClickListener(OnButtonClick);
             next.setOnClickListener(OnButtonClick);
+        }
+
+    }
+
+    public  boolean isReadStoragePermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG,"Permission is granted1");
+                return true;
+            } else {
+
+                Log.v(TAG,"Permission is revoked1");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 3);
+                return false;
+            }
+        }
+        else { //permission is automatically granted on sdk<23 upon installation
+            Log.v(TAG,"Permission is granted1");
+            return true;
+        }
+    }
+
+    public  boolean isWriteStoragePermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG,"Permission is granted2");
+                return true;
+            } else {
+
+                Log.v(TAG,"Permission is revoked2");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 2);
+                return false;
+            }
+        }
+        else { //permission is automatically granted on sdk<23 upon installation
+            Log.v(TAG,"Permission is granted2");
+            return true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 2:
+                Log.d(TAG, "External storage2");
+                if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                    Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
+                    //resume tasks needing this permission
+                    initialiseView();
+                }else{
+//                    progress.dismiss();
+                }
+                break;
+
+            case 3:
+                Log.d(TAG, "External storage1");
+                if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                    Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
+                    //resume tasks needing this permission
+                    initialiseView();
+                }else{
+//                    progress.dismiss();
+                }
+                break;
         }
     }
 
@@ -128,10 +212,12 @@ public class MainActivity extends ListActivity {
     protected void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updatePositinRunnable);
-        player.stop();
-        player.reset();
-        player.release();
-        player = null;
+        if(player != null) {
+            player.stop();
+            player.reset();
+            player.release();
+            player = null;
+        }
     }
 
     private void updatePosition() {
@@ -148,6 +234,12 @@ public class MainActivity extends ListActivity {
             if (player != null) {
                 long totalDuration = player.getDuration();
                 long currentDuration = player.getCurrentPosition();
+                long playerdata=player.getAudioSessionId();
+                audioData.setText("");
+//                AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+//                audioManager.getActivePlaybackConfigurations().;
+
+
 
                 durationCurrentTime.setText("" + utils.milliSecondsToTimer(currentDuration));
                 // Updating progress bar
